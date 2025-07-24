@@ -1,0 +1,20 @@
+http:
+  middlewares:
+    cache:
+      advancedCache:
+        configPath: "/config/config.dev.yaml"
+
+  routers:
+    proxy-router:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: upstream
+      middlewares:
+        - cache
+
+  services:
+    upstream:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8021"

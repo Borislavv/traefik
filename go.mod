@@ -118,6 +118,14 @@ require (
 )
 
 require (
+	github.com/VictoriaMetrics/metrics v1.38.0
+	github.com/dgraph-io/ristretto v0.2.0
+	github.com/fasthttp/router v1.5.4
+	github.com/savsgio/gotils v0.0.0-20250408102913-196191ec6287
+	github.com/zeebo/xxh3 v1.0.2
+)
+
+require (
 	cloud.google.com/go/auth v0.15.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
@@ -183,6 +191,7 @@ require (
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/dnsimple/dnsimple-go v1.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/exoscale/egoscale/v3 v3.1.13 // indirect
@@ -342,6 +351,8 @@ require (
 	github.com/transip/gotransip/v6 v6.26.0 // indirect
 	github.com/ultradns/ultradns-go-sdk v1.8.0-20241010134910-243eeec // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fastrand v1.1.0 // indirect
+	github.com/valyala/histogram v1.2.0 // indirect
 	github.com/vinyldns/go-vinyldns v0.9.16 // indirect
 	github.com/volcengine/volc-sdk-golang v1.0.199 // indirect
 	github.com/vultr/govultr/v3 v3.17.0 // indirect

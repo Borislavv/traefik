@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	advancedcachemiddleware "github.com/traefik/traefik/v3/pkg/middlewares/advancedcache"
 	"net/http"
 	"reflect"
 	"slices"
@@ -133,6 +134,15 @@ func (b *Builder) buildConstructor(ctx context.Context, middlewareName string) (
 		}
 		middleware = func(next http.Handler) (http.Handler, error) {
 			return auth.NewBasic(ctx, next, *config.BasicAuth, middlewareName)
+		}
+	}
+
+	if config.AdvancedCache != nil {
+		if middleware != nil {
+			return nil, badConf
+		}
+		middleware = func(next http.Handler) (http.Handler, error) {
+			return advancedcachemiddleware.NewAdvancedCache(ctx, next, config.AdvancedCache, middlewareName), nil
 		}
 	}
 

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	advancedcachemiddleware "github.com/traefik/traefik/v3/pkg/middlewares/advancedcache"
 	"os"
 	"os/signal"
 	"time"
@@ -47,7 +48,16 @@ func NewServer(routinesPool *safe.Pool, entryPoints TCPEntryPoints, entryPointsU
 func (s *Server) Start(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
+
+		dumpCtx, dumpCancel := context.WithTimeout(context.Background(), time.Minute)
+		defer dumpCancel()
+
 		logger := log.Ctx(ctx)
+
+		if err := advancedcachemiddleware.Dumper.Dump(dumpCtx); err != nil {
+			logger.Error().Err(err).Msg("[dump] failed to store cache dump")
+		}
+
 		logger.Info().Msg("I have to go...")
 		logger.Info().Msg("Stopping server gracefully")
 		s.Stop()

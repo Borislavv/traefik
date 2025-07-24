@@ -21,10 +21,6 @@ func (m *AdvancedCacheMiddleware) run(ctx context.Context, config *config.Traefi
 
 	m.setUpCache()
 
-	if err := m.loadDump(); err != nil {
-		log.Error().Err(err).Msg("[dump] failed to load")
-	}
-
 	enabled.Store(m.cfg.Cache.Enabled)
 	m.storage.Run()
 	m.evictor.Run()

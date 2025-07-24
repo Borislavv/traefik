@@ -40,7 +40,6 @@ type AdvancedCacheMiddleware struct {
 	backend   repository.Backender
 	refresher storage.Refresher
 	evictor   storage.Evictor
-	dumper    storage.Dumper
 	metrics   metrics.Meter
 	count     int64 // Num
 	duration  int64 // UnixNano

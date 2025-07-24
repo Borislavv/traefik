@@ -1,0 +1,19 @@
+entryPoints:
+  web:
+    address: ":8020"
+
+providers:
+  file:
+    filename: ./routes.yml
+    watch: true
+
+api:
+  dashboard: false
+  insecure: false
+
+log:
+  level: INFO
+  format: common
+
+metrics:
+  prometheus: {}

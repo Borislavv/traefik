@@ -19,7 +19,7 @@ type TraefikIntermediateConfig struct {
 }
 
 type Cache struct {
-	Cache CacheBox `yaml:"cache"`
+	Cache *CacheBox `yaml:"cache"`
 }
 
 func (c *Cache) IsProd() bool {
@@ -41,16 +41,35 @@ type Env struct {
 type CacheBox struct {
 	Env         string           `yaml:"env"`
 	Enabled     bool             `yaml:"enabled"`
+	Proxy       *Proxy           `yaml:"proxy"`
+	Persistence *Persistence     `yaml:"persistence"`
+	Refresh     *Refresh         `yaml:"refresh"`
+	Eviction    *Eviction        `yaml:"eviction"`
+	Storage     *Storage         `yaml:"storage"`
 	Logs        Logs             `yaml:"logs"`
+	K8S         K8S              `yaml:"k8s"`
+	Metrics     Metrics          `yaml:"metrics"`
 	ForceGC     ForceGC          `yaml:"forceGC"`
 	LifeTime    Lifetime         `yaml:"lifetime"`
-	Upstream    Upstream         `yaml:"upstream"`
-	Persistence Persistence      `yaml:"persistence"`
 	Preallocate Preallocation    `yaml:"preallocate"`
-	Eviction    Eviction         `yaml:"eviction"`
-	Refresh     Refresh          `yaml:"refresh"`
-	Storage     Storage          `yaml:"storage"`
 	Rules       map[string]*Rule `yaml:"rules"`
+}
+
+type Probe struct {
+	Timeout time.Duration `yaml:"timeout"`
+}
+
+type K8S struct {
+	Probe Probe `yaml:"probe"`
+}
+
+type Metrics struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+type Mock struct {
+	Enabled bool `yaml:"enabled"`
+	Length  int  `yaml:"length"`
 }
 
 type ForceGC struct {
@@ -64,34 +83,41 @@ type Logs struct {
 }
 
 type Lifetime struct {
-	MaxReqDuration                  time.Duration `yaml:"maxReqDur"`             // If a request lifetime is longer than 100ms then request will be canceled by context.
-	EscapeMaxReqDurationHeader      string        `yaml:"escapeMaxReqDurHeader"` // If the header exists the timeout above will be skipped.
+	MaxReqDuration                  time.Duration `yaml:"max_req_dur"`               // If a request lifetime is longer than 100ms then request will be canceled by context.
+	EscapeMaxReqDurationHeader      string        `yaml:"escape_max_req_dur_header"` // If the header exists the timeout above will be skipped.
 	EscapeMaxReqDurationHeaderBytes []byte        // The same value but converted into slice bytes.
 }
 
-type Upstream struct {
-	Url     string        `yaml:"url"`     // Reverse Proxy url (can be found in Caddyfile). URL to underlying backend.
+type Proxy struct {
+	Name    string        `yaml:"name"`
+	FromUrl []byte        // Reverse Proxy url (can be found in Caddyfile). URL to underlying backend.
+	From    string        `yaml:"from"`
+	To      string        `yaml:"to"`
 	Rate    int           `yaml:"rate"`    // Rate limiting reqs to backend per second.
 	Timeout time.Duration `yaml:"timeout"` // Timeout for requests to backend.
 }
 
 type Dump struct {
-	IsEnabled   bool   `yaml:"enabled"`
-	Dir         string `yaml:"dumpDir"`
-	Name        string `yaml:"dumpName"`
-	MaxVersions int    `yaml:"maxVersions"`
+	IsEnabled    bool   `yaml:"enabled"`
+	Dir          string `yaml:"dump_dir"`
+	Name         string `yaml:"dump_name"`
+	MaxVersions  int    `yaml:"max_versions"`
+	Gzip         bool   `yaml:"gzip"`
+	Crc32Control bool   `yaml:"crc32_control_sum"`
 }
 
 type Persistence struct {
-	Dump Dump `yaml:"dump"`
+	Dump *Dump `yaml:"dump"`
+	Mock *Mock `yaml:"mock"`
 }
 
 type Preallocation struct {
-	PerShard int `yaml:"perShard"`
+	Shards   int `yaml:"num_shards"`
+	PerShard int `yaml:"per_shard"`
 }
 
 type Eviction struct {
-	Policy    string  `yaml:"policy"`    // at now, it's only "lru" + TinyLFU
+	Enabled   bool    `yaml:"enabled"`
 	Threshold float64 `yaml:"threshold"` // 0.9 means 90%
 }
 
@@ -103,19 +129,31 @@ type Storage struct {
 type Refresh struct {
 	Enabled bool `yaml:"enabled"`
 	// TTL - refresh TTL (max time life of response item in cache without refreshing).
-	TTL time.Duration `yaml:"ttl"` // e.g. "1d" (responses with 200 status code)
-	// ErrorTTL - error refresh TTL (max time life of response item with non 200 status code in cache without refreshing).
-	ErrorTTL time.Duration `yaml:"errorTTL"` // e.g. "1h" (responses with non 200 status code)
-	Rate     int           `yaml:"rate"`     // Rate limiting to external backend.
-	ScanRate int           `yaml:"scanRate"` // Rate limiting of num scans items per second.
+	TTL      time.Duration `yaml:"ttl"`       // e.g. "1d" (responses with 200 status code)
+	Rate     int           `yaml:"rate"`      // Rate limiting to external backend.
+	ScanRate int           `yaml:"scan_rate"` // Rate limiting of num scans items per second.
 	// beta определяет коэффициент, используемый для вычисления случайного момента обновления кэша.
 	// Чем выше beta, тем чаще кэш будет обновляться до истечения TTL.
 	// Формула взята из подхода "stochastic cache expiration" (см. Google Staleness paper):
 	// expireTime = ttl * (-beta * ln(random()))
 	// Подробнее: RFC 5861 и https://web.archive.org/web/20100829170210/http://labs.google.com/papers/staleness.pdf
 	// beta: "0.4"
-	Beta     float64       `yaml:"beta"` // between 0 and 1
-	MinStale time.Duration // computed=time.Duration(float64(TTL/ErrorTTL) * Beta)
+	Beta        float64 `yaml:"beta"`        // between 0 and 1
+	Coefficient float64 `yaml:"coefficient"` // Starts attempts to renew data after TTL*coefficient=50% (12h if whole TTL is 24h)
+}
+
+type RuleRefresh struct {
+	Enabled bool `yaml:"enabled"`
+	// TTL - refresh TTL (max time life of response item in cache without refreshing).
+	TTL time.Duration `yaml:"ttl"` // e.g. "1d" (responses with 200 status code)
+	// beta определяет коэффициент, используемый для вычисления случайного момента обновления кэша.
+	// Чем выше beta, тем чаще кэш будет обновляться до истечения TTL.
+	// Формула взята из подхода "stochastic cache expiration" (см. Google Staleness paper):
+	// expireTime = ttl * (-beta * ln(random()))
+	// Подробнее: RFC 5861 и https://web.archive.org/web/20100829170210/http://labs.google.com/papers/staleness.pdf
+	// beta: "0.4"
+	Beta        float64 `yaml:"beta"`        // between 0 and 1
+	Coefficient float64 `yaml:"coefficient"` // Starts attempts to renew data after TTL*coefficient=50% (12h if whole TTL is 24h)
 }
 
 type Gzip struct {
@@ -124,26 +162,23 @@ type Gzip struct {
 }
 
 type Rule struct {
-	Gzip       Gzip `yaml:"gzip"`
-	PathBytes  []byte
-	TTL        time.Duration `yaml:"ttl"`      // TTL for this rule.
-	ErrorTTL   time.Duration `yaml:"errorTTL"` // ErrorTTL for this rule.
-	Beta       float64       `yaml:"beta"`     // between 0 and 1
-	CacheKey   Key           `yaml:"cacheKey"`
-	CacheValue Value         `yaml:"cacheValue"`
-	MinStale   time.Duration // computed=time.Duration(float64(TTL/ErrorTTL) * Beta)
+	Gzip       Gzip         `yaml:"gzip"`
+	CacheKey   RuleKey      `yaml:"cache_key"`
+	CacheValue RuleValue    `yaml:"cache_value"`
+	Refresh    *RuleRefresh `yaml:"refresh"`
+	PathBytes  []byte       // Virtual field
 }
 
-type Key struct {
-	Query      []string `yaml:"query"` // Параметры, которые будут участвовать в ключе кэширования
-	QueryBytes [][]byte
-	Headers    []string `yaml:"headers"` // Хедеры, которые будут участвовать в ключе кэширования
-	HeadersMap map[string]struct{}
+type RuleKey struct {
+	Query      []string            `yaml:"query"` // Параметры, которые будут участвовать в ключе кэширования
+	QueryBytes [][]byte            // Virtual field
+	Headers    []string            `yaml:"headers"` // Хедеры, которые будут участвовать в ключе кэширования
+	HeadersMap map[string]struct{} // Virtual field
 }
 
-type Value struct {
-	Headers    []string `yaml:"headers"` // Хедеры ответа, которые будут сохранены в кэше вместе с body
-	HeadersMap map[string]struct{}
+type RuleValue struct {
+	Headers    []string            `yaml:"headers"` // Хедеры ответа, которые будут сохранены в кэше вместе с body
+	HeadersMap map[string]struct{} // Virtual field
 }
 
 func LoadConfig(path string) (*Cache, error) {
@@ -152,7 +187,7 @@ func LoadConfig(path string) (*Cache, error) {
 		return nil, err
 	}
 
-	path, err = filepath.Abs(filepath.Clean(dir + path))
+	path, err = filepath.Abs(filepath.Clean(filepath.Join(dir, path)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve absolute config filepath: %w", err)
 	}
@@ -192,12 +227,9 @@ func LoadConfig(path string) (*Cache, error) {
 			valueHeadersMap[header] = struct{}{}
 		}
 		rule.CacheValue.HeadersMap = valueHeadersMap
-
-		// Other
-		rule.MinStale = time.Duration(float64(rule.TTL) * rule.Beta)
 	}
 
-	cfg.Cache.Refresh.MinStale = time.Duration(float64(cfg.Cache.Refresh.TTL) * cfg.Cache.Refresh.Beta)
+	cfg.Cache.Proxy.FromUrl = []byte(cfg.Cache.Proxy.From)
 
 	cfg.Cache.LifeTime.EscapeMaxReqDurationHeaderBytes = []byte(cfg.Cache.LifeTime.EscapeMaxReqDurationHeader)
 

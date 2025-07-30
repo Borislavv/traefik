@@ -142,7 +142,7 @@ func (b *Builder) buildConstructor(ctx context.Context, middlewareName string) (
 			return nil, badConf
 		}
 		middleware = func(next http.Handler) (http.Handler, error) {
-			return advancedcachemiddleware.NewAdvancedCache(ctx, next, config.AdvancedCache, middlewareName), nil
+			return advancedcachemiddleware.New(ctx, next, config.AdvancedCache, middlewareName), nil
 		}
 	}
 

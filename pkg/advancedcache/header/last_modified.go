@@ -27,10 +27,6 @@ var (
 	}
 )
 
-func SetLastModifiedNetHttp(w http.ResponseWriter, entry *model.VersionPointer) {
-	SetLastModifiedValueNetHttp(w, entry.UpdateAt())
-}
-
 func SetLastModifiedValueNetHttp(w http.ResponseWriter, v int64) {
 	buf := bufPool.Get().(*[]byte)
 	*buf = (*buf)[:0]
@@ -41,7 +37,11 @@ func SetLastModifiedValueNetHttp(w http.ResponseWriter, v int64) {
 	bufPool.Put(buf)
 }
 
-func SetLastModifiedFastHttp(r *fasthttp.RequestCtx, entry *model.VersionPointer) {
+func SetLastModifiedNetHttp(w http.ResponseWriter, entry *model.Entry) {
+	SetLastModifiedValueNetHttp(w, entry.UpdateAt())
+}
+
+func SetLastModifiedFastHttp(r *fasthttp.RequestCtx, entry *model.Entry) {
 	SetLastModifiedValueFastHttp(r, entry.UpdateAt())
 }
 

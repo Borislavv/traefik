@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"errors"
-	advancedcachemiddleware "github.com/traefik/traefik/v3/pkg/middlewares/advancedcache"
+	middleware2 "github.com/traefik/traefik/v3/pkg/middlewares/advancedcache"
 	"os"
 	"os/signal"
 	"time"
@@ -54,8 +54,10 @@ func (s *Server) Start(ctx context.Context) {
 
 		logger := log.Ctx(ctx)
 
-		if err := advancedcachemiddleware.Dumper.Dump(dumpCtx); err != nil {
-			logger.Error().Err(err).Msg("[dump] failed to store cache dump")
+		if middleware2.Dumper != nil {
+			if err := middleware2.Dumper.Dump(dumpCtx); err != nil {
+				logger.Error().Err(err).Msg("[dump] failed to store cache dump")
+			}
 		}
 
 		logger.Info().Msg("I have to go...")

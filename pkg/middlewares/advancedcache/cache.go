@@ -85,6 +85,9 @@ func (m *TraefikCacheMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	} else {
 		m.handleThroughProxy(w, r)
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+
 	return
 }
 

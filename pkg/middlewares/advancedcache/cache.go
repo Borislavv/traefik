@@ -59,6 +59,9 @@ type TraefikCacheMiddleware struct {
 	evictor   lru.Evictor
 	dumper    storage.Dumper
 	metrics   metrics.Meter
+	// values
+	contentTypeString  string
+	applicationJsonStr string
 }
 
 func New(ctx context.Context, next http.Handler, cfg *config.TraefikIntermediateConfig, name string) http.Handler {
@@ -71,6 +74,11 @@ func New(ctx context.Context, next http.Handler, cfg *config.TraefikIntermediate
 	if err := cacheMiddleware.run(ctx, cfg); err != nil {
 		panic(err)
 	}
+
+	contentTypeBytes := []byte("Content-Type")
+	applicationJsonStr := []byte("application/json")
+	cacheMiddleware.contentTypeString = unsafe.String(unsafe.SliceData(contentTypeBytes), len(contentTypeBytes))
+	cacheMiddleware.applicationJsonStr = unsafe.String(unsafe.SliceData(applicationJsonStr), len(applicationJsonStr))
 
 	return cacheMiddleware
 }
@@ -86,7 +94,7 @@ func (m *TraefikCacheMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		m.handleThroughProxy(w, r)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(m.contentTypeString, m.applicationJsonStr)
 
 	return
 }

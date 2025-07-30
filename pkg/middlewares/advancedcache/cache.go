@@ -64,12 +64,11 @@ type TraefikCacheMiddleware struct {
 func New(ctx context.Context, next http.Handler, cfg *config.TraefikIntermediateConfig, name string) http.Handler {
 	cacheMiddleware := &TraefikCacheMiddleware{
 		ctx:  ctx,
-		cfg:  cfg,
 		next: next,
 		name: name,
 	}
 
-	if err := cacheMiddleware.run(ctx); err != nil {
+	if err := cacheMiddleware.run(ctx, cfg); err != nil {
 		panic(err)
 	}
 
@@ -123,6 +122,7 @@ func (m *TraefikCacheMiddleware) handleThroughProxy(w http.ResponseWriter, r *ht
 	status, headers, body, payloadReleaser, err := m.backend.Fetch(nil, path, query, queryHeaders)
 	defer payloadReleaser()
 	if err != nil {
+		errors.Add(1)
 		m.respondThatServiceIsTemporaryUnavailable(w, err)
 		return
 	}
@@ -145,7 +145,9 @@ func (m *TraefikCacheMiddleware) handleThroughProxy(w http.ResponseWriter, r *ht
 	w.WriteHeader(status)
 
 	// Write a response body
-	_, _ = w.Write(body)
+	if _, err = w.Write(body); err != nil {
+		errors.Add(1)
+	}
 }
 
 func (m *TraefikCacheMiddleware) handleThroughCache(w http.ResponseWriter, r *http.Request) {
@@ -155,6 +157,7 @@ func (m *TraefikCacheMiddleware) handleThroughCache(w http.ResponseWriter, r *ht
 			m.handleThroughProxy(w, r)
 			return
 		}
+		errors.Add(1)
 		m.respondThatServiceIsTemporaryUnavailable(w, err)
 		return
 	}
@@ -175,7 +178,7 @@ func (m *TraefikCacheMiddleware) handleThroughCache(w http.ResponseWriter, r *ht
 		defer releaseCapturer()
 
 		// run downstream handler
-		m.next.ServeHTTP(captured, r)
+		m.handleThroughProxy(w, r)
 
 		// path is immutable and used only inside request
 		path := unsafe.Slice(unsafe.StringData(r.URL.Path), len(r.URL.Path))

@@ -119,9 +119,7 @@ require (
 
 require (
 	github.com/VictoriaMetrics/metrics v1.38.0
-	github.com/dgraph-io/ristretto v0.2.0
 	github.com/fasthttp/router v1.5.4
-	github.com/savsgio/gotils v0.0.0-20250408102913-196191ec6287
 	github.com/zeebo/xxh3 v1.0.2
 )
 
@@ -191,7 +189,6 @@ require (
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/dnsimple/dnsimple-go v1.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/exoscale/egoscale/v3 v3.1.13 // indirect
@@ -325,6 +322,7 @@ require (
 	github.com/sacloud/packages-go v0.0.10 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/savsgio/gotils v0.0.0-20250408102913-196191ec6287 // indirect
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.32 // indirect
 	github.com/selectel/domains-go v1.1.0 // indirect
 	github.com/selectel/go-selvpcclient/v3 v3.2.1 // indirect

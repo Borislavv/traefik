@@ -612,14 +612,13 @@ func (e *Entry) getFilteredAndSortedKeyQueriesFastHttp(r *fasthttp.RequestCtx) (
 
 	allowedKeys := e.rule.CacheKey.QueryBytes
 
-	r.QueryArgs().All()(func(key, value []byte) bool {
+	r.QueryArgs().VisitAll(func(key, value []byte) {
 		for _, ak := range allowedKeys {
 			if bytes.HasPrefix(key, ak) {
 				*out = append(*out, [2][]byte{key, value})
 				break
 			}
 		}
-		return true
 	})
 
 	if len(*out) > 1 {
@@ -652,9 +651,9 @@ func (e *Entry) getFilteredAndSortedKeyHeadersFastHttp(r *fasthttp.RequestCtx) (
 	allowed := e.rule.CacheKey.HeadersMap
 
 	n := 0
-	r.Request.Header.All()(func(k, v []byte) bool {
+	r.Request.Header.VisitAll(func(k, v []byte) {
 		if _, ok := allowed[unsafe.String(unsafe.SliceData(k), len(k))]; !ok {
-			return true
+			return
 		}
 
 		if n < cap(*out) {
@@ -670,8 +669,6 @@ func (e *Entry) getFilteredAndSortedKeyHeadersFastHttp(r *fasthttp.RequestCtx) (
 			*out = append(*out, [2][]byte{k, v})
 		}
 		n++
-
-		return true
 	})
 
 	*out = (*out)[:n]

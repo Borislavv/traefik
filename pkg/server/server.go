@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"errors"
-	middleware2 "github.com/traefik/traefik/v3/pkg/middlewares/advancedcache"
+	advaneccachemiddleware "github.com/traefik/traefik/v3/pkg/middlewares/advancedcache"
 	"os"
 	"os/signal"
 	"time"
@@ -52,14 +52,9 @@ func (s *Server) Start(ctx context.Context) {
 		dumpCtx, dumpCancel := context.WithTimeout(context.Background(), time.Minute)
 		defer dumpCancel()
 
+		advaneccachemiddleware.StoreDumpIfNecessary(dumpCtx)
+
 		logger := log.Ctx(ctx)
-
-		if middleware2.Dumper != nil {
-			if err := middleware2.Dumper.Dump(dumpCtx); err != nil {
-				logger.Error().Err(err).Msg("[dump] failed to store cache dump")
-			}
-		}
-
 		logger.Info().Msg("I have to go...")
 		logger.Info().Msg("Stopping server gracefully")
 		s.Stop()

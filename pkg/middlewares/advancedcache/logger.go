@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/rs/zerolog/log"
-	"github.com/traefik/traefik/v3/pkg/config"
-	"github.com/traefik/traefik/v3/pkg/utils"
+	"github.com/traefik/traefik/v3/pkg/advancedcache/config"
+	"github.com/traefik/traefik/v3/pkg/advancedcache/utils"
 	"strconv"
 	"time"
 )

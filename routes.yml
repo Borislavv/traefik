@@ -2,7 +2,7 @@ http:
   middlewares:
     cache:
       advancedCache:
-        configPath: "/config/config.dev.yaml"
+        configPath: "advancedCache.cfg.yaml"
 
   routers:
     proxy-router:
@@ -17,4 +17,4 @@ http:
     upstream:
       loadBalancer:
         servers:
-          - url: "http://localhost:8080"
+          - url: "http://localhost:8021"

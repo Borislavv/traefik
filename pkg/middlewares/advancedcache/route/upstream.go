@@ -32,6 +32,7 @@ type UpstreamRoute struct {
 }
 
 func NewUpstream(backend repository.Backender) *UpstreamRoute {
+	defer EnableUpstream()
 	return &UpstreamRoute{backend: backend}
 }
 

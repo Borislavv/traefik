@@ -4,7 +4,7 @@ cache:
 
   proxy:
     name: "traefik.star"                          # Proxy server name
-    from: "http://localhost:8021"                 # Backend (example of full qualified url: http://localhost:8021)
+    from: "http://localhost:8080"                 # Backend (example of full qualified url: http://localhost:8021)
     to: ":8020"                                   # Current server port
     rate: 1000000                                 # Rate limiting reqs to backend per second.
     timeout: "1m"                                 # Timeout for requests to backend.

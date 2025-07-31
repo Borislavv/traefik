@@ -44,6 +44,7 @@ type CacheRoute struct {
 }
 
 func NewCacheRoutes(cfg *config.Cache, storage storage.Storage, backend repository.Backender) *CacheRoute {
+	defer EnableCache()
 	return &CacheRoute{
 		cfg:     cfg,
 		storage: storage,

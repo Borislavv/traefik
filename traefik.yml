@@ -16,4 +16,5 @@ log:
   format: common
 
 metrics:
-  prometheus: {}
+  prometheus:
+    entryPoint: web

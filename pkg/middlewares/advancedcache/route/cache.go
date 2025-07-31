@@ -106,7 +106,6 @@ func (c *CacheRoute) writeResponse(w http.ResponseWriter, entry *model.Entry) er
 	_, _, queryHeaders, responseHeaders, responseBody, status, payloadReleaser, err := entry.Payload()
 	defer payloadReleaser(queryHeaders, responseHeaders)
 	if err != nil {
-		fmt.Println("payload error: ", err.Error())
 		return err
 	}
 
@@ -129,7 +128,6 @@ func (c *CacheRoute) writeResponse(w http.ResponseWriter, entry *model.Entry) er
 
 	// Write a response body
 	if _, err = w.Write(responseBody); err != nil {
-		fmt.Println("write error: ", err.Error())
 		return err
 	}
 

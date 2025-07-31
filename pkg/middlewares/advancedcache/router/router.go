@@ -2,7 +2,6 @@ package router
 
 import (
 	"github.com/rs/zerolog/log"
-	httpwriter "github.com/traefik/traefik/v3/pkg/advancedcache/writer"
 	"github.com/traefik/traefik/v3/pkg/middlewares/advancedcache/counter"
 	"net/http"
 	"time"
@@ -37,16 +36,11 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() { counter.Duration.Add(time.Since(from).Nanoseconds()) }()
 	counter.Total.Add(1)
 
-	captured, releaser := httpwriter.NewCaptureResponseWriter(w)
-	defer releaser()
-
 	defer func() {
 		if err := recover(); err != nil {
 			counter.Panics.Add(1)
 			log.Panic().Msgf("Recovered from panic: %v\n", err)
-			captured.Reset()
-			router.unavailable.ServeHTTP(captured, r)
-			captured.Copy(w)
+			router.unavailable.ServeHTTP(w, r)
 			return
 		}
 	}()
@@ -61,8 +55,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			counter.Errors.Add(1)
 			if route.IsInternal() {
 				return // error: respond error from internal route
-			}
-			// error: fallback to upstream
+			} // error: otherwise fallback to upstream
 		} else {
 			return // success: respond with route response
 		}
@@ -71,7 +64,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if router.upstream.IsEnabled() {
 		if err := router.upstream.ServeHTTP(w, r); err != nil {
 			counter.Errors.Add(1)
-			// error: responed that server is unavailable
+			// error: respond that server is unavailable
 		} else {
 			return // success: respond with upstream response
 		}

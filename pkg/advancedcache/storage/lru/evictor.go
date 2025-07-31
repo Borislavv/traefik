@@ -5,7 +5,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/traefik/traefik/v3/pkg/advancedcache/config"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/traefik/traefik/v3/pkg/advancedcache/utils"
@@ -148,16 +147,11 @@ func (e *Evict) runLogger() {
 					continue loop
 				}
 
-				logEvent := log.Info()
-
-				if e.cfg.IsProd() {
-					logEvent.
-						Str("target", "eviction").
-						Str("freedMemBytes", strconv.Itoa(int(evictsMemPer5Sec))).
-						Str("freedItems", strconv.Itoa(evictsNumPer5Sec))
-				}
-
-				logEvent.Msgf("[eviction][5s] removed %d items, freed %s bytes", evictsNumPer5Sec, utils.FmtMem(evictsMemPer5Sec))
+				log.Info().
+					Str("target", "eviction").
+					Int64("freedMemBytes", evictsMemPer5Sec).
+					Int("freedItems", evictsNumPer5Sec).
+					Msg("[eviction][5s]")
 
 				evictsNumPer5Sec = 0
 				evictsMemPer5Sec = 0

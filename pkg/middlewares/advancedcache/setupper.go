@@ -8,6 +8,8 @@ import (
 	"github.com/traefik/traefik/v3/pkg/advancedcache/repository"
 	"github.com/traefik/traefik/v3/pkg/advancedcache/storage"
 	"github.com/traefik/traefik/v3/pkg/advancedcache/storage/lru"
+	"github.com/traefik/traefik/v3/pkg/middlewares/advancedcache/route"
+	"github.com/traefik/traefik/v3/pkg/middlewares/advancedcache/router"
 )
 
 var (
@@ -16,21 +18,39 @@ var (
 )
 
 func (m *TraefikCacheMiddleware) setUpCache() {
-	enabled.Store(m.cfg.Cache.Enabled)
-
+	ctx := m.ctx
 	cacheCfg = m.cfg
-	m.metrics = metrics.New()
-	m.backend = repository.NewBackend(m.ctx, m.cfg)
-	m.storage = lru.NewStorage(m.ctx, m.cfg, m.backend)
-	cacheDumper = storage.NewDumper(m.cfg, m.storage, m.backend)
 
-	LoadDumpIfNecessary(m.ctx)
-	m.LoadMocksIfNecessary()
+	// build dependencies
+	meter := metrics.New()
+	backend := repository.NewBackend(ctx, cacheCfg)
+	db := lru.NewStorage(ctx, cacheCfg, backend)
+	cacheDumper = storage.NewDumper(cacheCfg, db, backend)
+
+	m.router = router.NewRouter(
+		route.NewUpstream(backend),
+		route.NewCacheRoutes(cacheCfg, db, backend),
+		route.NewClearRoute(cacheCfg, db),
+		route.NewK8sProbeRoute(),
+		route.NewEnableRoute(),
+		route.NewDisableRoute(),
+		route.NewMetricsRoute(),
+	)
+
+	// run additional workers
+	NewMetricsLogger(ctx, cacheCfg, db, meter).run()
+
+	// load data if necessary
+	LoadDumpIfNecessary(ctx)
+	m.loadMocksIfNecessary(ctx, backend, db)
+
+	// tell everyone that cache is enabled
+	route.EnableCache()
 }
 
-func (m *TraefikCacheMiddleware) LoadMocksIfNecessary() {
+func (m *TraefikCacheMiddleware) loadMocksIfNecessary(ctx context.Context, backend repository.Backender, db storage.Storage) {
 	if cacheCfg.Cache.Persistence.Mock.Enabled {
-		storage.LoadMocks(m.ctx, m.cfg, m.backend, m.storage, m.cfg.Cache.Persistence.Mock.Length)
+		storage.LoadMocks(ctx, cacheCfg, backend, db, cacheCfg.Cache.Persistence.Mock.Length)
 	}
 }
 

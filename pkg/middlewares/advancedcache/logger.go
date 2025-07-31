@@ -1,24 +1,46 @@
 package middleware
 
 import (
+	"context"
 	"github.com/rs/zerolog/log"
 	"github.com/traefik/traefik/v3/pkg/advancedcache/config"
+	"github.com/traefik/traefik/v3/pkg/advancedcache/prometheus/metrics"
+	"github.com/traefik/traefik/v3/pkg/advancedcache/storage"
 	"github.com/traefik/traefik/v3/pkg/advancedcache/utils"
+	"github.com/traefik/traefik/v3/pkg/middlewares/advancedcache/counter"
+	"github.com/traefik/traefik/v3/pkg/middlewares/advancedcache/route"
 	"strconv"
 	"time"
 )
 
+type MetricsLogger struct {
+	ctx     context.Context
+	cfg     *config.Cache
+	storage storage.Storage
+	metrics metrics.Meter
+}
+
+func NewMetricsLogger(ctx context.Context, cfg *config.Cache, storage storage.Storage, metrics metrics.Meter) *MetricsLogger {
+	return &MetricsLogger{
+		ctx:     ctx,
+		cfg:     cfg,
+		storage: storage,
+		metrics: metrics,
+	}
+}
+
 // runControllerLogger runs a goroutine to periodically log RPS and avg duration per window, if debug enabled.
-func (m *TraefikCacheMiddleware) runLoggerMetricsWriter() {
+func (l *MetricsLogger) run() {
 	go func() {
-		metricsTicker := utils.NewTicker(m.ctx, time.Second)
+		metricsTicker := utils.NewTicker(l.ctx, time.Second)
 
 		var (
-			// 5s логика
+			// 5s accumulators
 			totalNum         int64
 			hitsNum          int64
 			missesNum        int64
 			errorsNum        int64
+			panicsNum        int64
 			proxiedNum       int64
 			totalDurationNum int64
 
@@ -26,7 +48,7 @@ func (m *TraefikCacheMiddleware) runLoggerMetricsWriter() {
 			acc12Hourly counters
 			acc24Hourly counters
 
-			// тикеры
+			// different interval tickers
 			eachHour   = time.NewTicker(time.Hour)
 			each12Hour = time.NewTicker(12 * time.Hour)
 			each24Hour = time.NewTicker(24 * time.Hour)
@@ -38,42 +60,45 @@ func (m *TraefikCacheMiddleware) runLoggerMetricsWriter() {
 
 		for {
 			select {
-			case <-m.ctx.Done():
+			case <-l.ctx.Done():
 				return
 
 			case <-metricsTicker:
-				totalNumLoc := total.Swap(0)
-				hitsNumLoc := hits.Swap(0)
-				missesNumLoc := misses.Swap(0)
-				proxiedNumLoc := proxies.Swap(0)
-				errorsNumLoc := errors.Swap(0)
-				totalDurationNumLoc := totalDuration.Swap(0)
+				totalNumLoc := counter.Total.Swap(0)
+				hitsNumLoc := counter.Hits.Swap(0)
+				missesNumLoc := counter.Misses.Swap(0)
+				proxiedNumLoc := counter.Proxies.Swap(0)
+				errorsNumLoc := counter.Errors.Swap(0)
+				panicsNumLoc := counter.Panics.Swap(0)
+				totalDurationNumLoc := counter.Duration.Swap(0)
 
 				// metrics export
 				var avgDuration float64
 				if totalNumLoc > 0 {
 					avgDuration = float64(totalDurationNumLoc) / float64(totalNumLoc)
 				}
-				memUsage, length := m.storage.Stat()
-				m.metrics.SetCacheLength(uint64(length))
-				m.metrics.SetCacheMemory(uint64(memUsage))
-				m.metrics.SetHits(uint64(hitsNumLoc))
-				m.metrics.SetMisses(uint64(missesNumLoc))
-				m.metrics.SetErrors(uint64(errorsNumLoc))
-				m.metrics.SetProxiedNum(uint64(proxiedNumLoc))
-				m.metrics.SetRPS(float64(totalNumLoc))
-				m.metrics.SetAvgResponseTime(avgDuration)
+				memUsage, length := l.storage.Stat()
+				l.metrics.SetCacheLength(uint64(length))
+				l.metrics.SetCacheMemory(uint64(memUsage))
+				l.metrics.SetHits(uint64(hitsNumLoc))
+				l.metrics.SetMisses(uint64(missesNumLoc))
+				l.metrics.SetErrors(uint64(errorsNumLoc))
+				l.metrics.SetPanics(uint64(panicsNumLoc))
+				l.metrics.SetProxiedNum(uint64(proxiedNumLoc))
+				l.metrics.SetRPS(float64(totalNumLoc))
+				l.metrics.SetAvgResponseTime(avgDuration)
 
 				totalNum += totalNumLoc
 				hitsNum += hitsNumLoc
 				missesNum += missesNumLoc
 				errorsNum += errorsNumLoc
+				panicsNum += panicsNumLoc
 				proxiedNum += proxiedNumLoc
 				totalDurationNum += totalDurationNumLoc
 
-				accHourly.add(totalNumLoc, hitsNumLoc, missesNumLoc, errorsNumLoc, proxiedNumLoc, totalDurationNumLoc)
-				acc12Hourly.add(totalNumLoc, hitsNumLoc, missesNumLoc, errorsNumLoc, proxiedNumLoc, totalDurationNumLoc)
-				acc24Hourly.add(totalNumLoc, hitsNumLoc, missesNumLoc, errorsNumLoc, proxiedNumLoc, totalDurationNumLoc)
+				accHourly.add(totalNumLoc, hitsNumLoc, missesNumLoc, errorsNumLoc, panicsNumLoc, proxiedNumLoc, totalDurationNumLoc)
+				acc12Hourly.add(totalNumLoc, hitsNumLoc, missesNumLoc, errorsNumLoc, panicsNumLoc, proxiedNumLoc, totalDurationNumLoc)
+				acc24Hourly.add(totalNumLoc, hitsNumLoc, missesNumLoc, errorsNumLoc, panicsNumLoc, proxiedNumLoc, totalDurationNumLoc)
 
 				if i == logIntervalSecs {
 					elapsed := time.Since(prev)
@@ -84,35 +109,25 @@ func (m *TraefikCacheMiddleware) runLoggerMetricsWriter() {
 						continue
 					}
 
-					logEvent := log.Info()
 					var target string
-					if enabled.Load() {
+					if route.IsCacheEnabled() {
 						target = "cache-controller"
 					} else {
 						target = "proxy-controller"
 					}
 
-					if m.cfg.IsProd() {
-						logEvent.
-							Str("target", target).
-							Str("rps", strconv.Itoa(int(rps))).
-							Str("served", strconv.Itoa(int(totalNum))).
-							Str("periodMs", strconv.Itoa(logIntervalSecs*1000)).
-							Str("avgDuration", duration.String()).
-							Str("elapsed", elapsed.String())
-					}
-
-					if enabled.Load() {
-						logEvent.Msgf(
-							"[%s][%s] served %d requests (rps: %.f, avg.dur.: %s hits: %d, misses: %d, errors: %d)",
-							target, elapsed.String(), totalNum, rps, duration.String(), hitsNum, missesNum, errorsNum,
-						)
-					} else {
-						logEvent.Msgf(
-							"[%s][%s] served %d requests (rps: %.f, avg.dur.: %s total: %d, proxied: %d, errors: %d)",
-							target, elapsed.String(), totalNum, rps, duration.String(), totalNum, proxiedNum, errorsNum,
-						)
-					}
+					log.Info().
+						Str("target", target).
+						Float64("rps", rps).
+						Int64("served", totalNum).
+						Int64("hits", hitsNum).
+						Int64("missed", missesNum).
+						Int64("errors", errorsNum).
+						Int64("panics", panicsNum).
+						Str("periodMs", strconv.Itoa(logIntervalSecs*1000)).
+						Str("avgDuration", duration.String()).
+						Str("elapsed", elapsed.String()).
+						Msgf("[%s][%s]", target, elapsed.String())
 
 					totalNum = 0
 					hitsNum = 0
@@ -126,15 +141,15 @@ func (m *TraefikCacheMiddleware) runLoggerMetricsWriter() {
 				i++
 
 			case <-eachHour.C:
-				logLong("1h", accHourly, m.cfg)
+				l.logLong("1h", accHourly)
 				accHourly.reset()
 
 			case <-each12Hour.C:
-				logLong("12h", acc12Hourly, m.cfg)
+				l.logLong("12h", acc12Hourly)
 				acc12Hourly.reset()
 
 			case <-each24Hour.C:
-				logLong("24h", acc24Hourly, m.cfg)
+				l.logLong("24h", acc24Hourly)
 				acc24Hourly.reset()
 			}
 		}
@@ -146,24 +161,26 @@ type counters struct {
 	hits     int64
 	misses   int64
 	errors   int64
+	panics   int64
 	proxied  int64
 	duration int64
 }
 
-func (c *counters) add(total, hits, misses, errors, proxied, dur int64) {
+func (c *counters) add(total, hits, misses, errors, panics, proxied, dur int64) {
 	c.total += total
 	c.hits += hits
 	c.misses += misses
 	c.errors += errors
+	c.panics += panics
 	c.proxied += proxied
 	c.duration += dur
 }
 
 func (c *counters) reset() {
-	c.total, c.hits, c.misses, c.errors, c.proxied, c.duration = 0, 0, 0, 0, 0, 0
+	c.total, c.hits, c.misses, c.errors, c.panics, c.proxied, c.duration = 0, 0, 0, 0, 0, 0, 0
 }
 
-func logLong(label string, c counters, cfg *config.Cache) {
+func (l *MetricsLogger) logLong(label string, c counters) {
 	if c.total == 0 {
 		return
 	}
@@ -186,20 +203,16 @@ func logLong(label string, c counters, cfg *config.Cache) {
 		}
 	}
 
-	logEvent := log.Info()
-	if cfg.IsProd() {
-		logEvent = logEvent.
-			Str("target", "cache-long-metrics").
-			Str("period", label).
-			Int64("total", c.total).
-			Int64("hits", c.hits).
-			Int64("misses", c.misses).
-			Int64("errors", c.errors).
-			Int64("proxied", c.proxied).
-			Float64("avgRPS", avgRPS).
-			Str("avgDuration", avgDur.String())
-	}
-
-	logEvent.Msgf("[cache][%s] total=%d hits=%d misses=%d errors=%d proxied=%d avgRPS=%.2f avgDur=%s",
-		label, c.total, c.hits, c.misses, c.errors, c.proxied, avgRPS, avgDur.String())
+	log.Info().
+		Str("target", "cache-long-metrics").
+		Str("period", label).
+		Int64("total", c.total).
+		Int64("hits", c.hits).
+		Int64("misses", c.misses).
+		Int64("errors", c.errors).
+		Int64("panics", c.panics).
+		Int64("proxied", c.proxied).
+		Float64("avgRPS", avgRPS).
+		Str("avgDuration", avgDur.String()).
+		Msgf("[cache/proxy-controller][%s] ", label)
 }

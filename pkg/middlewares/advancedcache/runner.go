@@ -22,8 +22,6 @@ func (m *TraefikCacheMiddleware) run(ctx context.Context, config *config.Traefik
 
 	gc.Run(ctx, cfg)
 
-	m.runLoggerMetricsWriter()
-
 	log.Info().Msg("[advanced-cache] has been started")
 
 	return nil

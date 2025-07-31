@@ -10,7 +10,7 @@ func NewRouteNotEnabled() *RouteNotEnabled {
 }
 
 func (f *RouteNotEnabled) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(http.StatusNotAcceptable)
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write([]byte(`{
 		"status": 403,

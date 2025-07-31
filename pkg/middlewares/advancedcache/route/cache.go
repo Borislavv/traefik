@@ -60,15 +60,15 @@ func (c *CacheRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 
 	reqEntry := model.NewEntryNetHttp(rule, r)
 
-	if entry, hit := c.storage.Get(reqEntry); hit {
+	if cacheEntry, hit := c.storage.Get(reqEntry); hit {
 		counter.Hits.Add(1)
-		return c.writeResponse(w, entry)
+		return c.writeResponse(w, cacheEntry)
 	}
 
 	counter.Misses.Add(1)
-	if entry, err := c.fetchUpstream(r, reqEntry); err == nil {
-		c.storage.Set(entry)
-		return c.writeResponse(w, entry)
+	if fetchedEntry, err := c.fetchUpstream(r, reqEntry); err == nil {
+		c.storage.Set(fetchedEntry)
+		return c.writeResponse(w, fetchedEntry)
 	} else {
 		return err
 	}
@@ -81,13 +81,8 @@ func (c *CacheRoute) fetchUpstream(r *http.Request, entry *model.Entry) (*model.
 	queryHeaders, queryReleaser := getQueryHeaders(r)
 	defer queryReleaser(queryHeaders)
 
-	var rule *config.Rule
-	if entry != nil {
-		rule = entry.Rule()
-	}
-
 	counter.Proxies.Add(1)
-	statusCode, responseHeaders, body, releaser, err := c.backend.Fetch(rule, path, query, queryHeaders)
+	statusCode, responseHeaders, body, releaser, err := c.backend.Fetch(entry.Rule(), path, query, queryHeaders)
 	defer releaser()
 	if err != nil {
 		return nil, err
@@ -99,11 +94,9 @@ func (c *CacheRoute) fetchUpstream(r *http.Request, entry *model.Entry) (*model.
 		return nil, upstreamBadStatusCodeError
 	}
 
-	if entry != nil {
-		entry.SetPayload(path, query, queryHeaders, responseHeaders, body, statusCode)
-		entry.SetRevalidator(c.backend.RevalidatorMaker())
-		entry.TouchUpdatedAt()
-	}
+	entry.SetPayload(path, query, queryHeaders, responseHeaders, body, statusCode)
+	entry.SetRevalidator(c.backend.RevalidatorMaker())
+	entry.TouchUpdatedAt()
 
 	return entry, nil
 }

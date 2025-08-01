@@ -3,11 +3,11 @@ cache:
   enabled: true
 
   proxy:
-    name: "traefik.star"                          # Proxy server name
-    from: "http://localhost:8080"                 # Backend (example of full qualified url: http://localhost:8021)
-    to: ":8020"                                   # Current server port
-    rate: 1000000                                 # Rate limiting reqs to backend per second.
-    timeout: "1m"                                 # Timeout for requests to backend.
+    name: "traefik.star"                     # Proxy server name
+    from: "http://seo-master-seo:8080"       # Backend (example of full qualified url: http://localhost:8021)
+    to: ":8020"                              # Current server port
+    rate: 80                                 # Rate limiting reqs to backend per second.
+    timeout: "1m"                            # Timeout for requests to backend.
 
   metrics:
     enabled: true
@@ -25,7 +25,7 @@ cache:
       gzip: false
       crc32_control_sum: true
     mock:
-      enabled: false
+      enabled: true
       length: 10000000
 
   logs:
@@ -55,8 +55,8 @@ cache:
   refresh:
     enabled: true     # Should this be run?
     ttl: "24h"        # Will be used be default with 200 status code.
-    rate: 1000        # Rate limiting reqs to backend per second.
-    scan_rate: 10000  # Rate limiting of num scans items per second.
+    rate: 80          # Rate limiting reqs to backend per second.
+    scan_rate: 20000  # Rate limiting of num scans items per second.
     beta: 0.4         # Controls randomness in refresh timing to avoid thundering herd (from 0 to 1).
     coefficient: 0.5  # Starts attempts to renew data after TTL*coefficient=50% (12h if whole TTL is 24h)
 
@@ -64,7 +64,7 @@ cache:
     /api/v2/pagedata:
       refresh:
         enabled: true     # Should this be run?
-        ttl: "12m"        # Will be used be default with 200 status code.
+        ttl: "1h"        # Will be used be default with 200 status code.
         beta: 0.4         # Controls randomness in refresh timing to avoid thundering herd (from 0 to 1).
         coefficient: 0.1  # Starts attempts to renew data after TTL*coefficient=50% (12h if whole TTL is 24h)
       cache_key:

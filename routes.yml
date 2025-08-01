@@ -17,4 +17,4 @@ http:
     upstream:
       loadBalancer:
         servers:
-          - url: "http://localhost:8021"
+          - url: "http://seo-master-seo:8080"

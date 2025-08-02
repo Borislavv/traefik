@@ -55,7 +55,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			counter.Errors.Add(1)
 			if route.IsInternal() {
 				return // error: respond error from internal route
-			} // error: otherwise fallback to upstream
+			} else {
+				// error: otherwise fallback to upstream
+			}
 		} else {
 			return // success: respond with route response
 		}

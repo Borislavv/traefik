@@ -87,11 +87,11 @@ func (u *UpstreamRoute) writeResponse(w http.ResponseWriter, status int, headers
 	// Last-Modified
 	header.SetLastModifiedValueNetHttp(w, time.Now().UnixNano())
 
-	// StatusCode-code
-	w.WriteHeader(status)
-
 	// Content-Type
 	w.Header().Set("Content-Type", "application/json")
+
+	// StatusCode-code
+	w.WriteHeader(status)
 
 	// Write a response body
 	_, err := w.Write(body)

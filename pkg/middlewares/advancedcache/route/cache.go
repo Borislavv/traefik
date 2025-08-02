@@ -44,7 +44,6 @@ type CacheRoute struct {
 }
 
 func NewCacheRoutes(cfg *config.Cache, storage storage.Storage, backend repository.Backender) *CacheRoute {
-	defer EnableCache()
 	return &CacheRoute{
 		cfg:     cfg,
 		storage: storage,
@@ -120,11 +119,11 @@ func (c *CacheRoute) writeResponse(w http.ResponseWriter, entry *model.Entry) er
 	// Last-Modified
 	header.SetLastModifiedNetHttp(w, entry)
 
-	// StatusCode-code
-	w.WriteHeader(status)
-
 	// Content-Type
 	w.Header().Set("Content-Type", "application/json")
+
+	// StatusCode-code
+	w.WriteHeader(status)
 
 	// Write a response body
 	if _, err = w.Write(responseBody); err != nil {

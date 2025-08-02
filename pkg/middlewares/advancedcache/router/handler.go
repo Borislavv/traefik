@@ -10,8 +10,8 @@ func NewRouteNotEnabled() *RouteNotEnabled {
 }
 
 func (f *RouteNotEnabled) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotAcceptable)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotAcceptable)
 	_, _ = w.Write([]byte(`{
 		"status": 403,
 		"error": "Forbidden",
@@ -27,8 +27,8 @@ func NewRouteInternalError() *RouteInternalError {
 }
 
 func (f *RouteInternalError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusInternalServerError)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
 	_, _ = w.Write([]byte(`{
 		"status": 500,
 		"error":"Internal server error",
@@ -44,8 +44,8 @@ func NewRouteNotFound() *RouteNotFound {
 }
 
 func (f *RouteNotFound) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
 	_, _ = w.Write([]byte(`{"status": 404,"error":"Not Found","message":"Route not found, check the URL is correct."}`))
 }
 
@@ -56,8 +56,8 @@ func NewUnavailableRoute() *UnavailableRoute {
 }
 
 func (c *UnavailableRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusServiceUnavailable)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusServiceUnavailable)
 	_, _ = w.Write([]byte(`{
 	  "status": 503,
 	  "error": "Service unavailable",

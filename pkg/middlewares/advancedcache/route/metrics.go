@@ -14,8 +14,8 @@ func NewMetricsRoute() *MetricsRoute {
 }
 
 func (c *MetricsRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	metrics.WritePrometheus(w, true)
 	return nil
 }

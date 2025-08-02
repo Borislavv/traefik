@@ -49,6 +49,7 @@ func NewClearRoute(cfg *config.Cache, storage storage.Storage) *ClearCacheRoute 
 func (m *ClearCacheRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	now := time.Now()
 	raw := r.URL.Query().Get("token")
+	w.Header().Set("Content-Type", "application/json")
 
 	if raw == "" {
 		// return or reuse token
@@ -57,7 +58,6 @@ func (m *ClearCacheRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) erro
 			tok, exp := m.token, m.expires
 			m.mu.Unlock()
 			w.WriteHeader(fasthttp.StatusForbidden)
-
 			_ = json.NewEncoder(w).Encode(tokenResponse{Token: tok, ExpiresAt: exp.UnixMilli()})
 			return nil
 		}

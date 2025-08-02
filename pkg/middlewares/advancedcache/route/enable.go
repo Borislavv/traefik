@@ -22,8 +22,8 @@ func NewEnableRoute() *EnableRoute {
 // handleThroughProxy handles POST /adv-cache/on and enables the advanced cache, returning JSON.
 func (c *EnableRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	EnableCache()
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(onOffStatusResponse{Enabled: true, Message: "cache isCacheEnabled"})
 	return nil
 }

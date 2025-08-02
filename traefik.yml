@@ -14,7 +14,3 @@ api:
 log:
   level: INFO
   format: common
-
-metrics:
-  prometheus:
-    entryPoint: web

@@ -5,6 +5,7 @@ import (
 )
 
 type Upstream = Route
+type CacheProxy = Upstream
 
 type Route interface {
 	IsEnabled() bool

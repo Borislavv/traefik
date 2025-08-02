@@ -13,13 +13,14 @@ type Router struct {
 	ctx         context.Context
 	routing     map[string]Route
 	upstream    Upstream
+	cacheProxy  CacheProxy
 	errored     http.Handler
 	notEnabled  http.Handler
 	unavailable http.Handler
 	errorsCh    chan error
 }
 
-func NewRouter(ctx context.Context, upstream Upstream, routes ...Route) *Router {
+func NewRouter(ctx context.Context, upstream Upstream, cacheProxy CacheProxy, routes ...Route) *Router {
 	routing := make(map[string]Route, len(routes)*4)
 	for _, route := range routes {
 		for _, path := range route.Paths() {
@@ -30,6 +31,7 @@ func NewRouter(ctx context.Context, upstream Upstream, routes ...Route) *Router 
 		ctx:         ctx,
 		routing:     routing,
 		upstream:    upstream,
+		cacheProxy:  cacheProxy,
 		errorsCh:    make(chan error, 2048),
 		errored:     NewRouteInternalError(),
 		notEnabled:  NewRouteNotEnabled(),
@@ -64,13 +66,18 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err := route.ServeHTTP(w, r); err != nil {
 			router.errorsCh <- err
 			counter.Errors.Add(1)
-			if route.IsInternal() {
-				return // error: respond error from internal route
-			} else {
-				// error: otherwise fallback to upstream
-			}
+		}
+
+		return // respond with route response
+	}
+
+	if router.cacheProxy.IsEnabled() {
+		if err := router.cacheProxy.ServeHTTP(w, r); err != nil {
+			router.errorsCh <- err
+			counter.Errors.Add(1)
+			// error: fallback to upstream
 		} else {
-			return // success: respond with route response
+			return // success: respond with cacheProxy response
 		}
 	}
 

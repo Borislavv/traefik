@@ -57,7 +57,12 @@ func (s *InMemoryStorage) init() *InMemoryStorage {
 }
 
 func (s *InMemoryStorage) Clear() {
-	s.shardedMap.WalkShards(s.ctx, func(key uint64, shard *sharded.Shard[*model.Entry]) {
+	s.shardedMap.WalkShards(s.ctx, func(shardKey uint64, shard *sharded.Shard[*model.Entry]) {
+		shard.Walk(s.ctx, func(key uint64, entry *model.Entry) bool {
+			s.balancer.Remove(shardKey, entry.LruListElement())
+			return true
+		}, true)
+
 		shard.Clear()
 	})
 }

@@ -27,7 +27,7 @@ func (m *TraefikCacheMiddleware) setUpCache() {
 	db := lru.NewStorage(ctx, cacheCfg, backend)
 	cacheDumper = storage.NewDumper(cacheCfg, db, backend)
 
-	m.router = router.NewRouter(
+	m.router = router.NewRouter(ctx,
 		route.NewUpstream(backend),
 		route.NewCacheRoutes(cacheCfg, db, backend),
 		route.NewClearRoute(cacheCfg, db),

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
-	"github.com/traefik/traefik/v3/webui"
+	//"github.com/traefik/traefik/v3/webui"
 )
 
 type indexTemplateData struct {
@@ -26,7 +26,7 @@ type Handler struct {
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	assets := h.assets
 	if assets == nil {
-		assets = webui.FS
+		//assets = webui.FS
 	}
 
 	// Allow iframes from traefik domains only.
@@ -65,7 +65,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func Append(router *mux.Router, basePath string, customAssets fs.FS) error {
 	assets := customAssets
 	if assets == nil {
-		assets = webui.FS
+		//assets = webui.FS
 	}
 
 	indexTemplate, err := template.ParseFS(assets, "index.html")

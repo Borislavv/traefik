@@ -3,10 +3,7 @@ package service
 import (
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
 	"github.com/traefik/traefik/v3/pkg/api"
-	"github.com/traefik/traefik/v3/pkg/api/dashboard"
 	"github.com/traefik/traefik/v3/pkg/config/runtime"
 	"github.com/traefik/traefik/v3/pkg/config/static"
 	"github.com/traefik/traefik/v3/pkg/metrics"
@@ -43,20 +40,7 @@ func NewManagerFactory(staticConfiguration static.Configuration, routinesPool *s
 
 	if staticConfiguration.API != nil {
 		apiRouterBuilder := api.NewBuilder(staticConfiguration)
-
-		if staticConfiguration.API.Dashboard {
-			factory.dashboardHandler = dashboard.Handler{BasePath: staticConfiguration.API.BasePath}
-			factory.api = func(configuration *runtime.Configuration) http.Handler {
-				router := apiRouterBuilder(configuration).(*mux.Router)
-				if err := dashboard.Append(router, staticConfiguration.API.BasePath, nil); err != nil {
-					log.Error().Err(err).Msg("Error appending dashboard to API router")
-				}
-
-				return router
-			}
-		} else {
-			factory.api = apiRouterBuilder
-		}
+		factory.api = apiRouterBuilder
 	}
 
 	if staticConfiguration.Providers != nil && staticConfiguration.Providers.Rest != nil {

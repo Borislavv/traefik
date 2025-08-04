@@ -64,13 +64,26 @@ func (l *MetricsLogger) run() {
 				return
 
 			case <-metricsTicker:
-				totalNumLoc := counter.Total.Swap(0)
-				hitsNumLoc := counter.Hits.Swap(0)
-				missesNumLoc := counter.Misses.Swap(0)
-				proxiedNumLoc := counter.Proxies.Swap(0)
-				errorsNumLoc := counter.Errors.Swap(0)
-				panicsNumLoc := counter.Panics.Swap(0)
-				totalDurationNumLoc := counter.Duration.Swap(0)
+				totalNumLoc := counter.Total.Load()
+				counter.Total.Store(0)
+
+				hitsNumLoc := counter.Hits.Load()
+				counter.Hits.Store(0)
+
+				missesNumLoc := counter.Misses.Load()
+				counter.Misses.Store(0)
+
+				proxiedNumLoc := counter.Proxies.Load()
+				counter.Proxies.Store(0)
+
+				errorsNumLoc := counter.Errors.Load()
+				counter.Errors.Store(0)
+
+				panicsNumLoc := counter.Panics.Load()
+				counter.Panics.Store(0)
+
+				totalDurationNumLoc := counter.Duration.Load()
+				counter.Duration.Store(0)
 
 				// metrics export
 				var avgDuration float64

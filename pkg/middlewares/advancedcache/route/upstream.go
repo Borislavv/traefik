@@ -64,14 +64,6 @@ func (u *UpstreamRoute) fetchUpstream(r *http.Request) (status int, headers *[][
 	if err != nil {
 		return status, headers, body, releaser, err
 	}
-
-	if status == http.StatusServiceUnavailable {
-		releaser()
-		return status, headers, body, releaser, err
-	} else if status != http.StatusOK {
-		return status, headers, body, releaser, err
-	}
-
 	return status, headers, body, releaser, err
 }
 
